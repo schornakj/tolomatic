@@ -30,8 +30,8 @@
 
 #include <boost/shared_ptr.hpp>
 
-#include "std_srvs/SetBool.h"
-#include "std_srvs/Trigger.h"
+#include "std_srvs/srv/set_bool.hpp"
+#include "std_srvs/srv/trigger.hpp"
 
 #include "odva_ethernetip/session.h"
 #include "odva_ethernetip/socket/socket.h"
@@ -39,16 +39,17 @@
 #include "input_assembly.h"
 #include "output_assembly.h"
 
-#include <acsi_eip_driver/acsi_inputs.h>
-#include <acsi_eip_driver/acsi_outputs.h>
-#include <acsi_eip_driver/acsi_status.h>
 
-#include <acsi_eip_driver/acsi_setProfile.h>
-#include <acsi_eip_driver/acsi_moveAbsolute.h>
-#include <acsi_eip_driver/acsi_moveIncremental.h>
-#include <acsi_eip_driver/acsi_moveRotary.h>
-#include <acsi_eip_driver/acsi_moveSelect.h>
-#include <acsi_eip_driver/acsi_moveVelocity.h>
+#include <tolomatic_msgs/msg/acsi_inputs.hpp>
+#include <tolomatic_msgs/msg/acsi_outputs.hpp>
+#include <tolomatic_msgs/msg/acsi_status.hpp>
+
+#include <tolomatic_msgs/srv/acsi_set_profile.hpp>
+#include <tolomatic_msgs/srv/acsi_move_absolute.hpp>
+#include <tolomatic_msgs/srv/acsi_move_incremental.hpp>
+#include <tolomatic_msgs/srv/acsi_move_rotary.hpp>
+#include <tolomatic_msgs/srv/acsi_move_select.hpp>
+#include <tolomatic_msgs/srv/acsi_move_velocity.hpp>
 
 using boost::shared_ptr;
 using eip::Session;
@@ -78,46 +79,62 @@ public:
   // drive interface functions
   InputAssembly getDriveData();
   void setDriveData();
-  void servoControlCallback(const acsi_outputs::ConstPtr& oa);
+  void servoControlCallback(const tolomatic_msgs::msg::AcsiOutputs::ConstPtr& oa);
   void updateDriveStatus(InputAssembly ia);
 
   // ROS service callback handler functions
-  bool enable(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
+  void enable(const std::shared_ptr<rmw_request_id_t> request_header,
+              const std::shared_ptr<std_srvs::srv::SetBool::Request> req, 
+              std::shared_ptr<std_srvs::srv::SetBool::Response> res);
 
-  bool estop(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
+  void estop(const std::shared_ptr<rmw_request_id_t> request_header,
+             const std::shared_ptr<std_srvs::srv::SetBool::Request> req, 
+             std::shared_ptr<std_srvs::srv::SetBool::Response> res);
 
-  bool setHome(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
+  void setHome(const std::shared_ptr<rmw_request_id_t> request_header,
+               const std::shared_ptr<std_srvs::srv::Trigger::Request> req, 
+               std::shared_ptr<std_srvs::srv::Trigger::Response> res);
 
-  bool moveHome(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
+  void moveHome(const std::shared_ptr<rmw_request_id_t> request_header,
+                const std::shared_ptr<std_srvs::srv::Trigger::Request> req, 
+                std::shared_ptr<std_srvs::srv::Trigger::Response> res);
 
-  bool moveStop(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
+  void moveStop(const std::shared_ptr<rmw_request_id_t> request_header,
+                const std::shared_ptr<std_srvs::srv::Trigger::Request> req, 
+                std::shared_ptr<std_srvs::srv::Trigger::Response> res);
 
-  bool setProfile(acsi_eip_driver::acsi_setProfile::Request& req,
-                  acsi_eip_driver::acsi_setProfile::Response& res);
+  void setProfile(const std::shared_ptr<rmw_request_id_t> request_header,
+                  const tolomatic_msgs::srv::AcsiSetProfile::Request& req,
+                  tolomatic_msgs::srv::AcsiSetProfile::Response& res);
 
-  bool moveAbsolute(acsi_eip_driver::acsi_moveAbsolute::Request& req,
-                    acsi_eip_driver::acsi_moveAbsolute::Response& res);
+  void moveAbsolute(const std::shared_ptr<rmw_request_id_t> request_header,
+                    const tolomatic_msgs::srv::AcsiMoveAbsolute::Request& req,
+                    tolomatic_msgs::srv::AcsiMoveAbsolute::Response& res);
 
-  bool moveIncremental(acsi_eip_driver::acsi_moveIncremental::Request& req,
-                       acsi_eip_driver::acsi_moveIncremental::Response& res);
+  void moveIncremental(const std::shared_ptr<rmw_request_id_t> request_header,
+                       const tolomatic_msgs::srv::AcsiMoveIncremental::Request& req,
+                       tolomatic_msgs::srv::AcsiMoveIncremental::Response& res);
 
-  bool moveRotary(acsi_eip_driver::acsi_moveRotary::Request& req,
-                  acsi_eip_driver::acsi_moveRotary::Response& res);
+  void moveRotary(const std::shared_ptr<rmw_request_id_t> request_header,
+                  const tolomatic_msgs::srv::AcsiMoveRotary::Request& req,
+                  tolomatic_msgs::srv::AcsiMoveRotary::Response& res);
 
-  bool moveSelect(acsi_eip_driver::acsi_moveSelect::Request& req,
-                  acsi_eip_driver::acsi_moveSelect::Response& res);
+  void moveSelect(const std::shared_ptr<rmw_request_id_t> request_header,
+                  const tolomatic_msgs::srv::AcsiMoveSelect::Request& req,
+                  tolomatic_msgs::srv::AcsiMoveSelect::Response& res);
 
-  bool moveVelocity(acsi_eip_driver::acsi_moveVelocity::Request& req,
-                    acsi_eip_driver::acsi_moveVelocity::Response& res);
+  void moveVelocity(const std::shared_ptr<rmw_request_id_t> request_header,
+                    const tolomatic_msgs::srv::AcsiMoveVelocity::Request& req,
+                    tolomatic_msgs::srv::AcsiMoveVelocity::Response& res);
 
 
   // TODO: Debug this
   // void startUDPIO(); //for implicit data; not working
 
-  acsi_inputs si;
-  acsi_outputs so;
-  acsi_status ss;
-  acsi_status ss_last;
+  tolomatic_msgs::msg::AcsiInputs si;
+  tolomatic_msgs::msg::AcsiOutputs so;
+  tolomatic_msgs::msg::AcsiStatus ss;
+  tolomatic_msgs::msg::AcsiStatus ss_last;
 
 private:
   // data for sending to stepper controller

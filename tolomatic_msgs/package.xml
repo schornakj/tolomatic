@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>tolomatic_msgs</name>
+  <version>1.4.0</version>
+  <description>tolomatic_msgs</description>
+  <author email="ben.greenberg@swri.org">Ben Greenberg</author>
+  <maintainer email="ben.greenberg@swri.org">Ben Greenberg</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <exec_depend>message_runtime</exec_depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>
+

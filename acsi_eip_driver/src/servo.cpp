@@ -26,7 +26,7 @@
  */
 
 #include <cmath>  // std::abs
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <string>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
@@ -134,100 +134,102 @@ void ACSI::setDriveData()
 
 }
 
-bool ACSI::enable(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res)
+void ACSI::enable(const std::shared_ptr<rmw_request_id_t> request_header,
+                  const std::shared_ptr<std_srvs::srv::SetBool::Request> req, 
+                  std::shared_ptr<std_srvs::srv::SetBool::Response> res)
 {
+  (void)request_header;
   if (ss.host_control)
   {
-    res.message = "Cannot enable Ethernet/IP";
-    res.success = false;
+    res->message = "Cannot enable Ethernet/IP";
+    res->success = false;
   }
 
-  if(req.data) {
+  if(req->data) {
     so.drive_command = so.drive_command | ENABLE;
-    res.message = "Drive enable";
+    res->message = "Drive enable";
   }
   else
   {
     so.drive_command = so.drive_command & (DISABLE | ESTOP);
-    res.message = "Drive disable";
+    res->message = "Drive disable";
   }
 
-  res.success = true;
-
-  return true;
+  res->success = true;
 }
 
-bool ACSI::estop(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res)
+void ACSI::estop(const std::shared_ptr<rmw_request_id_t> request_header,
+                 const std::shared_ptr<std_srvs::srv::SetBool::Request> req, 
+                 std::shared_ptr<std_srvs::srv::SetBool::Response> res)
 {
   if (ss.host_control)
   {
-    res.message = "Cannot enable Ethernet/IP";
-    res.success = false;
+    res->message = "Cannot enable Ethernet/IP";
+    res->success = false;
   }
   else
   {
-    so.drive_command = (req.data) ? ESTOP | so.drive_command: ~ESTOP & so.drive_command;
-    res.message = "Drive e-stopped";
-    res.success = true;
+    so.drive_command = (req->data) ? ESTOP | so.drive_command: ~ESTOP & so.drive_command;
+    res->message = "Drive e-stopped";
+    res->success = true;
   }
-
-  return true;
 }
 
-bool ACSI::moveHome(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+void ACSI::moveHome(const std::shared_ptr<rmw_request_id_t> request_header,
+                    const std::shared_ptr<std_srvs::srv::Trigger::Request> req, 
+                    std::shared_ptr<std_srvs::srv::Trigger::Response> res)
 {
   if (ss.host_control)
   {
-    res.message = "Cannot enable Ethernet/IP";
-    res.success = false;
+    res->message = "Cannot enable Ethernet/IP";
+    res->success = false;
   }
   else
   {
     so.drive_command = GOHOME | so.drive_command;
     so.motion_type = HOME;
-    res.message = "Moving Home";
-    res.success = true;
+    res->message = "Moving Home";
+    res->success = true;
   }
-
-  return true;
 }
 
-bool ACSI::moveStop(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+void ACSI::moveStop(const std::shared_ptr<rmw_request_id_t> request_header,
+                    const std::shared_ptr<std_srvs::srv::Trigger::Request> req, 
+                    std::shared_ptr<std_srvs::srv::Trigger::Response> res)
 {
   if (ss.host_control)
   {
-    res.message = "Cannot enable Ethernet/IP";
-    res.success = false;
+    res->message = "Cannot enable Ethernet/IP";
+    res->success = false;
   }
   else
   {
     so.drive_command = STOP | so.drive_command;
-    res.message = "Stopping";
-    res.success = true;
+    res->message = "Stopping";
+    res->success = true;
   }
-
-  return true;
 }
 
-bool ACSI::setHome(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+void ACSI::setHome(const std::shared_ptr<rmw_request_id_t> request_header,
+                   const std::shared_ptr<std_srvs::srv::Trigger::Request> req, 
+                   std::shared_ptr<std_srvs::srv::Trigger::Response> res)
 {
   if (ss.host_control)
   {
-    res.message = "Cannot enable Ethernet/IP";
-    res.success = false;
+    res->message = "Cannot enable Ethernet/IP";
+    res->success = false;
   }
   else
   {
     so.drive_command = HOME_HERE | so.drive_command;
-    res.message = "Set home";
-    res.success = true;
+    res->message = "Set home";
+    res->success = true;
   }
-
-  return true;
 }
 
-bool ACSI::setProfile(acsi_eip_driver::acsi_setProfile::Request& req,
-                      acsi_eip_driver::acsi_setProfile::Response& res)
+void ACSI::setProfile(const std::shared_ptr<rmw_request_id_t> request_header,
+                      const tolomatic_msgs::srv::AcsiSetProfile::Request& req,
+                      tolomatic_msgs::srv::AcsiSetProfile::Response& res)
 {
   if (ss.host_control)
   {
@@ -243,12 +245,11 @@ bool ACSI::setProfile(acsi_eip_driver::acsi_setProfile::Request& req,
     res.message = "Profile set";
     res.success = true;
   }
-
-  return true;
 }
 
-bool ACSI::moveVelocity(acsi_eip_driver::acsi_moveVelocity::Request& req,
-                        acsi_eip_driver::acsi_moveVelocity::Response& res)
+void ACSI::moveVelocity(const std::shared_ptr<rmw_request_id_t> request_header,
+                        const tolomatic_msgs::srv::AcsiMoveVelocity::Request& req,
+                        tolomatic_msgs::srv::AcsiMoveVelocity::Response& res)
 {
   if (ss.host_control)
   {
@@ -280,12 +281,11 @@ bool ACSI::moveVelocity(acsi_eip_driver::acsi_moveVelocity::Request& req,
     so.velocity = std::abs(req.velocity);
     res.success = true;
   }
-
-  return true;
 }
 
-bool ACSI::moveAbsolute(acsi_eip_driver::acsi_moveAbsolute::Request& req,
-                        acsi_eip_driver::acsi_moveAbsolute::Response& res)
+void ACSI::moveAbsolute(const std::shared_ptr<rmw_request_id_t> request_header,
+                        const tolomatic_msgs::srv::AcsiMoveAbsolute::Request& req,
+                        tolomatic_msgs::srv::AcsiMoveAbsolute::Response& res)
 {
   if (ss.host_control)
   {
@@ -306,12 +306,11 @@ bool ACSI::moveAbsolute(acsi_eip_driver::acsi_moveAbsolute::Request& req,
     res.message = "Move abolute";
     res.success = true;
   }
-
-  return true;
 }
 
-bool ACSI::moveIncremental(acsi_eip_driver::acsi_moveIncremental::Request& req,
-                           acsi_eip_driver::acsi_moveIncremental::Response& res)
+void ACSI::moveIncremental(const std::shared_ptr<rmw_request_id_t> request_header,
+                           const tolomatic_msgs::srv::AcsiMoveIncremental::Request& req,
+                           tolomatic_msgs::srv::AcsiMoveIncremental::Response& res)
 {
   if (ss.host_control)
   {
@@ -346,12 +345,11 @@ bool ACSI::moveIncremental(acsi_eip_driver::acsi_moveIncremental::Request& req,
     so.position = std::abs(req.increment);
     res.success = true;
   }
-
-  return true;
 }
 
-bool ACSI::moveRotary(acsi_eip_driver::acsi_moveRotary::Request& req,
-                      acsi_eip_driver::acsi_moveRotary::Response& res)
+void ACSI::moveRotary(const std::shared_ptr<rmw_request_id_t> request_header,
+                      const tolomatic_msgs::srv::AcsiMoveRotary::Request& req,
+                      tolomatic_msgs::srv::AcsiMoveRotary::Response& res)
 {
   if (ss.host_control)
   {
@@ -386,12 +384,11 @@ bool ACSI::moveRotary(acsi_eip_driver::acsi_moveRotary::Request& req,
     so.position = std::abs(req.increment);
     res.success = true;
   }
-
-  return true;
 }
 
-bool ACSI::moveSelect(acsi_eip_driver::acsi_moveSelect::Request& req,
-                      acsi_eip_driver::acsi_moveSelect::Response& res)
+void ACSI::moveSelect(const std::shared_ptr<rmw_request_id_t> request_header,
+                      const tolomatic_msgs::srv::AcsiMoveSelect::Request& req,
+                      tolomatic_msgs::srv::AcsiMoveSelect::Response& res)
 {
   if (ss.host_control) {
     res.message = "Cannot enable Ethernet/IP";
@@ -413,8 +410,6 @@ bool ACSI::moveSelect(acsi_eip_driver::acsi_moveSelect::Request& req,
     res.message = "Saved profile move";
     res.success = true;
   }
-
-  return true;
 }
 
 // void ACSI::startUDPIO()

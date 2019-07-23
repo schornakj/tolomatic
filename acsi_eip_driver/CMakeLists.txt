@@ -1,104 +1,73 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(acsi_eip_driver)
 
-find_package(catkin REQUIRED COMPONENTS
-    odva_ethernetip
-    roscpp
-    std_msgs
-    std_srvs
-    message_generation
-)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra)
+endif()
+
+find_package(ament_cmake REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+find_package(rosidl_typesupport_cpp REQUIRED)
+find_package(odva_ethernetip REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(tolomatic_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 find_package(Boost 1.58 REQUIRED COMPONENTS system)
 
-add_message_files(
-  FILES
-  acsi_inputs.msg
-  acsi_outputs.msg
-  acsi_status.msg
-)
-
-## acsi_enable.srv
-## acsi_estop.srv
-## acsi_moveStop.srv
-## acsi_setHome.srv
-## acsi_moveHome.srv
-
-add_service_files(
-  FILES
-  acsi_setProfile.srv
-  acsi_moveAbsolute.srv
-  acsi_moveIncremental.srv
-  acsi_moveSelect.srv
-  acsi_moveRotary.srv
-  acsi_moveVelocity.srv
-)
-
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-)
-
-catkin_package(
-  INCLUDE_DIRS include
-  CATKIN_DEPENDS odva_ethernetip roscpp message_runtime
-  LIBRARIES servo
-  DEPENDS Boost
-)
-
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS}
-)
-
 add_library(servo src/servo.cpp)
-target_link_libraries(servo
-  ${catkin_LIBRARIES}
+target_include_directories(servo PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include>"
+  ${rclcpp_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}  
+  ${tolomatic_msgs_INCLUDE_DIRS}  
+  ${sensor_msgs_INCLUDE_DIRS}  
+  ${odva_ethernetip_INCLUDE_DIRS}  
 )
-
-add_dependencies(
-    servo
-    ${${PROJECT_NAME}_EXPORTED_TARGETS}
-    ${catkin_EXPORTED_TARGETS}
+target_link_libraries(servo
+  ${rclcpp_LIBRARIES}
+  ${Boost_LIBRARIES}  
+  ${tolomatic_msgs_LIBRARIES}  
+  ${sensor_msgs_LIBRARIES}  
+  odva_ethernetip::odva_ethernetip
 )
 
 ## Declare a cpp executable
 add_executable(scanner_node src/scanner_node.cpp)
 target_link_libraries(scanner_node
-  ${catkin_LIBRARIES}
-  ${Boost_LIBRARIES}
+  servo
 )
 
 add_executable(servo_node src/servo_node.cpp)
 target_link_libraries(servo_node
   servo
-  ${catkin_LIBRARIES}
-  ${Boost_LIBRARIES}
 )
 
-add_dependencies(
-    servo_node
-    ${${PROJECT_NAME}_EXPORTED_TARGETS}
-    ${catkin_EXPORTED_TARGETS}
-)
+ament_export_include_directories(
+    include)
 
+set(ROS_LIB_DESTINATION lib)
+set(ROS_BIN_DESTINATION bin)
+set(ROS_INCLUDE_DESTINATION include)
+  
 ## Mark executables and libraries for installation
-install(TARGETS servo servo_node scanner_node
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
 )
 
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+install(TARGETS
+   servo
+   servo_node
+   scanner_node
+   DESTINATION lib/${PROJECT_NAME}
+)
 
-install(DIRECTORY launch
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+ament_package()
 
-if (CATKIN_ENABLE_TESTING)
-  find_package(roslaunch REQUIRED)
-  roslaunch_add_file_check(launch/servo.launch)
-
-endif()
 

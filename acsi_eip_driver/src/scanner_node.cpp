@@ -25,7 +25,7 @@
  * limitations under the License.
  */
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include "odva_ethernetip/io_scanner.h"
 
