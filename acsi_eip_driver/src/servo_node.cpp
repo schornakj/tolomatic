@@ -179,7 +179,7 @@ int main(int argc, char* argv[])
   auto moveStop_service = node->create_service<std_srvs::srv::Trigger>("moveStop", std::bind(&ACSI::moveStop, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   auto moveVelocity_service = node->create_service<tolomatic_msgs::srv::AcsiMoveVelocity>("moveVelocity", std::bind(&ACSI::moveVelocity, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   auto moveAbsolute_service = node->create_service<tolomatic_msgs::srv::AcsiMoveAbsolute>("moveAbsolute", std::bind(&ACSI::moveAbsolute, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-  auto moveIncremental_service = node->create_service<tolomatic_msgs::srv::AcsiMoveIncremental>("moveIncremental", &ACSI::moveIncremental);
+  auto moveIncremental_service = node->create_service<tolomatic_msgs::srv::AcsiMoveIncremental>("moveIncremental", std::bind(&ACSI::moveIncremental, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   auto moveRotary_service = node->create_service<tolomatic_msgs::srv::AcsiMoveRotary>("moveRotary", std::bind(&ACSI::moveRotary, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   auto setHome_service = node->create_service<std_srvs::srv::Trigger>("setHome", std::bind(&ACSI::setHome, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   auto setProfile_service = node->create_service<tolomatic_msgs::srv::AcsiSetProfile>("setProfile", std::bind(&ACSI::setProfile, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));

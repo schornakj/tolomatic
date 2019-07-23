@@ -104,28 +104,28 @@ public:
                 std::shared_ptr<std_srvs::srv::Trigger::Response> res);
 
   void setProfile(const std::shared_ptr<rmw_request_id_t> request_header,
-                  const tolomatic_msgs::srv::AcsiSetProfile::Request& req,
-                  tolomatic_msgs::srv::AcsiSetProfile::Response& res);
+                  const std::shared_ptr<tolomatic_msgs::srv::AcsiSetProfile::Request> req,
+                  std::shared_ptr<tolomatic_msgs::srv::AcsiSetProfile::Response> res);
 
   void moveAbsolute(const std::shared_ptr<rmw_request_id_t> request_header,
-                    const tolomatic_msgs::srv::AcsiMoveAbsolute::Request& req,
-                    tolomatic_msgs::srv::AcsiMoveAbsolute::Response& res);
+                    const std::shared_ptr<tolomatic_msgs::srv::AcsiMoveAbsolute::Request> req,
+                    std::shared_ptr<tolomatic_msgs::srv::AcsiMoveAbsolute::Response> res);
 
   void moveIncremental(const std::shared_ptr<rmw_request_id_t> request_header,
-                       const tolomatic_msgs::srv::AcsiMoveIncremental::Request& req,
-                       tolomatic_msgs::srv::AcsiMoveIncremental::Response& res);
+                       const std::shared_ptr<tolomatic_msgs::srv::AcsiMoveIncremental::Request> req,
+                       std::shared_ptr<tolomatic_msgs::srv::AcsiMoveIncremental::Response> res);
 
   void moveRotary(const std::shared_ptr<rmw_request_id_t> request_header,
-                  const tolomatic_msgs::srv::AcsiMoveRotary::Request& req,
-                  tolomatic_msgs::srv::AcsiMoveRotary::Response& res);
+                  const std::shared_ptr<tolomatic_msgs::srv::AcsiMoveRotary::Request> req,
+                  std::shared_ptr<tolomatic_msgs::srv::AcsiMoveRotary::Response> res);
 
   void moveSelect(const std::shared_ptr<rmw_request_id_t> request_header,
-                  const tolomatic_msgs::srv::AcsiMoveSelect::Request& req,
-                  tolomatic_msgs::srv::AcsiMoveSelect::Response& res);
+                  const std::shared_ptr<tolomatic_msgs::srv::AcsiMoveSelect::Request> req,
+                  std::shared_ptr<tolomatic_msgs::srv::AcsiMoveSelect::Response> res);
 
   void moveVelocity(const std::shared_ptr<rmw_request_id_t> request_header,
-                    const tolomatic_msgs::srv::AcsiMoveVelocity::Request& req,
-                    tolomatic_msgs::srv::AcsiMoveVelocity::Response& res);
+                    const std::shared_ptr<tolomatic_msgs::srv::AcsiMoveVelocity::Request> req,
+                    std::shared_ptr<tolomatic_msgs::srv::AcsiMoveVelocity::Response> res);
 
 
   // TODO: Debug this
