@@ -46,6 +46,7 @@ using namespace acsi_eip_driver;
 int main(int argc, char* argv[])
 {
   rclcpp::init(argc, argv);
+  rclcpp::sleep_for(std::chrono::seconds(3));
   auto node = rclcpp::Node::make_shared("servo");
 
   //ros::NodeHandle nh("~");
@@ -61,53 +62,60 @@ int main(int argc, char* argv[])
 
   //ros::Time::init();
 
-  double throttle_time;
-  node->declare_parameter("throttle");
-  throttle_time = node->get_parameter("throttle").as_double(), 10.0;
+  //TODO: load parameters from launch file
+  double throttle_time = 10.0;
+//  node->declare_parameter("throttle");
+//  throttle_time = node->get_parameter("throttle").as_double(), 10.0;
   rclcpp::Rate throttle(throttle_time);
 
   // get sensor config from params
-  string host;
-  node->declare_parameter("host");  
-  host = node->get_parameter("host").as_string(), "192.168.100.10";
+  string host = "192.168.100.10";
+//  node->declare_parameter("host");  
+//  host = node->get_parameter("host").as_string(), "192.168.100.10";
   RCLCPP_INFO(node->get_logger(), "Host is: %s", host.c_str());
 
   //This will be needed for implicit messaging
-  string local_ip;
-  node->declare_parameter("local_ip");    
-  host = node->get_parameter("local_ip").as_string(), "0.0.0.0";
+  string local_ip = "0.0.0.0";
+//  node->declare_parameter("local_ip");    
+//  host = node->get_parameter("local_ip").as_string(), "0.0.0.0";
   
   // optionally publish ROS joint_state messages
   bool publish_joint_state;
-  string joint_name, joint_states_topic;
-  node->declare_parameter("publish_joint_state");      
-  node->declare_parameter("joint_name");      
-  node->declare_parameter("joint_states_topic");        
-  publish_joint_state = node->get_parameter("publish_joint_state").as_bool(), false;
-  if (publish_joint_state)
-  {
-    joint_name = node->get_parameter("joint_name").as_string(), "drive1";
-    joint_states_topic = node->get_parameter("joint_states_topic").as_string(), "joint_states";    
-  }
+  string joint_name = "drive1";
+  string joint_states_topic = "joint_states";
+//  node->declare_parameter("publish_joint_state");      
+//  node->declare_parameter("joint_name");      
+//  node->declare_parameter("joint_states_topic");        
+//  publish_joint_state = node->get_parameter("publish_joint_state").as_bool(), false;
+//  if (publish_joint_state)
+//  {
+//    joint_name = node->get_parameter("joint_name").as_string(), "drive1";
+//    joint_states_topic = node->get_parameter("joint_states_topic").as_string(), "joint_states";    
+//  }
 
   boost::asio::io_service io_service;
   shared_ptr<TCPSocket> socket = shared_ptr<TCPSocket>(new TCPSocket(io_service));
   shared_ptr<UDPSocket> io_socket = shared_ptr<UDPSocket>(new UDPSocket(io_service, 0, local_ip));
 
-  ACSI servo(socket, io_socket);
+  auto servo = std::make_shared<ACSI>(socket, io_socket);
 
   RCLCPP_INFO(node->get_logger(), "Socket created");
 
   try
   {
-    servo.open(host);
+    servo->open(host);
     RCLCPP_INFO(node->get_logger(), "Host is open");
+    InputAssembly test = servo->getDriveData();  
+    servo->updateDriveStatus(test); 
   }
   catch (std::runtime_error& ex)
   {
-    //RCLCPP_FATAL(node->get_logger(), "Exception caught opening session: " << ex.what());
+    RCLCPP_FATAL(node->get_logger(), "Exception caught opening session: %s", ex.what());
     return -1;
   }
+  
+  InputAssembly test2 = servo->getDriveData();  
+  servo->updateDriveStatus(test2);
 
   try
   {
@@ -115,7 +123,7 @@ int main(int argc, char* argv[])
   }
   catch (std::invalid_argument& ex)
   {
-    //RCLCPP_FATAL(node->get_logger(), "Invalid arguments in sensor configuration: " << ex.what());
+    RCLCPP_FATAL(node->get_logger(), "Invalid arguments in sensor configuration: %s", ex.what());
     return -1;
   }
 
@@ -127,29 +135,29 @@ int main(int argc, char* argv[])
   }
   catch (std::logic_error& ex)
   {
-    //RCLCPP_FATAL(node->get_logger(), "Could not start UDP IO: " << ex.what());
+    RCLCPP_FATAL(node->get_logger(), "Could not start UDP IO: %s", ex.what());
     return -1;
   }
 
-  float default_accel;
-  node->declare_parameter("default_accel");      
-  default_accel = node->get_parameter("default_accel").as_double(), 100.0;
-  servo.so.accel = default_accel;
+  float default_accel = 100.0;
+//  node->declare_parameter("default_accel");      
+//  default_accel = node->get_parameter("default_accel").as_double(), 100.0;
+  servo->so.accel = default_accel;
 
-  float default_decel;
-  node->declare_parameter("default_decel");      
-  default_decel = node->get_parameter("default_decel").as_double(), 100.0;
-  servo.so.decel = default_decel;
+  float default_decel = 100.0;
+//  node->declare_parameter("default_decel");      
+//  default_decel = node->get_parameter("default_decel").as_double(), 100.0;
+  servo->so.decel = default_decel;
 
-  float default_force;
-  node->declare_parameter("default_force");      
-  default_force = node->get_parameter("default_force").as_double(), 30.0;
-  servo.so.force = default_force;
+  float default_force = 30.0;
+//  node->declare_parameter("default_force");      
+//  default_force = node->get_parameter("default_force").as_double(), 30.0;
+  servo->so.force = default_force;
 
-  float default_velocity;
-  node->declare_parameter("default_velocity");      
-  default_velocity = node->get_parameter("default_velocity").as_double(), 10.0;
-  servo.so.velocity = default_velocity;
+  float default_velocity = 10.0;
+//  node->declare_parameter("default_velocity");      
+//  default_velocity = node->get_parameter("default_velocity").as_double(), 10.0;
+  servo->so.velocity = default_velocity;
 
   // publisher for stepper status
   auto servo_pub = node->create_publisher<tolomatic_msgs::msg::AcsiInputs>("inputs", 1);
@@ -193,7 +201,10 @@ int main(int argc, char* argv[])
     try
     {
       // Collect status from controller, convert to ROS message format.
-      servo.updateDriveStatus(servo.getDriveData());
+      InputAssembly test = servo->getDriveData();
+      servo->updateDriveStatus(test);
+      //servo.updateDriveStatus(servo.getDriveData());
+      
 
       if (publish_joint_state)
       {
@@ -202,33 +213,33 @@ int main(int argc, char* argv[])
         joint_state.position.resize(1);
         joint_state.name[0] = joint_name;
         // TODO: See issue #2
-        joint_state.position[0] = double(servo.ss.current_position) / 1000.0;
+        joint_state.position[0] = double(servo->ss.current_position) / 1000.0;
         joint_state_pub->publish(joint_state);
       }
 
       // publish stepper inputs
-      servo_pub->publish(servo.si);
+      servo_pub->publish(servo->si);
 
       // publish stepper status
-      status_pub->publish(servo.ss);
+      status_pub->publish(servo->ss);
 
       // set outputs to stepper drive controller
-      servo.setDriveData();
+      servo->setDriveData();
     }
     catch (std::runtime_error& ex)
     {
-      RCLCPP_ERROR(node->get_logger(), "Exception caught requesting scan data: ");// << ex.what());
+      RCLCPP_ERROR(node->get_logger(), "Exception caught requesting scan data: %s", ex.what());
     }
     catch (std::logic_error& ex)
     {
-      RCLCPP_ERROR(node->get_logger(), "Problem parsing return data: ");// << ex.what());
+      RCLCPP_ERROR(node->get_logger(), "Problem parsing return data: ", ex.what());
     }
 
     rclcpp::spin_some(node);
     throttle.sleep();
   }
 
-  servo.closeConnection(0);
-  servo.close();
+  servo->closeConnection(0);
+  servo->close();
   return 0;
 }
