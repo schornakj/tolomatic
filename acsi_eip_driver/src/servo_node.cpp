@@ -49,49 +49,60 @@ int main(int argc, char* argv[])
   rclcpp::sleep_for(std::chrono::seconds(3));
   auto node = rclcpp::Node::make_shared("servo");
 
-  //ros::NodeHandle nh("~");
-
-  //bool debug;
-  //nh.param<bool>("debug", debug, true);
-  //ROS_INFO_STREAM("debug is: " << debug);
-  //while (debug)
-  //{
-  //  sleep(1);
-  //  nh.getParam("debug", debug);
-  //}
-
   //ros::Time::init();
 
-  //TODO: load parameters from launch file
-  double throttle_time = 10.0;
-//  node->declare_parameter("throttle");
-//  throttle_time = node->get_parameter("throttle").as_double(), 10.0;
+  double throttle_time;
+  node->declare_parameter("throttle");
+  if(!node->get_parameter<double>("throttle", throttle_time))
+  {
+    RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'throttle', using default instead.");
+    throttle_time = 10.0;
+  }
   rclcpp::Rate throttle(throttle_time);
 
   // get sensor config from params
-  string host = "192.168.100.10";
-//  node->declare_parameter("host");  
-//  host = node->get_parameter("host").as_string(), "192.168.100.10";
+  string host;
+  node->declare_parameter("host");  
+  if(!node->get_parameter<std::string>("host", host))
+  {
+    RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'host', using default instead.");
+    host = "192.168.100.10";
+  }
   RCLCPP_INFO(node->get_logger(), "Host is: %s", host.c_str());
 
   //This will be needed for implicit messaging
-  string local_ip = "0.0.0.0";
-//  node->declare_parameter("local_ip");    
-//  host = node->get_parameter("local_ip").as_string(), "0.0.0.0";
+  string local_ip;
+  node->declare_parameter("local_ip");    
+  if(!node->get_parameter<std::string>("local_ip", local_ip))
+  {
+    RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'local_ip', using default instead.");
+    local_ip = "0.0.0.0";
+  }
   
   // optionally publish ROS joint_state messages
   bool publish_joint_state;
   string joint_name = "drive1";
   string joint_states_topic = "joint_states";
-//  node->declare_parameter("publish_joint_state");      
-//  node->declare_parameter("joint_name");      
-//  node->declare_parameter("joint_states_topic");        
-//  publish_joint_state = node->get_parameter("publish_joint_state").as_bool(), false;
-//  if (publish_joint_state)
-//  {
-//    joint_name = node->get_parameter("joint_name").as_string(), "drive1";
-//    joint_states_topic = node->get_parameter("joint_states_topic").as_string(), "joint_states";    
-//  }
+  node->declare_parameter("publish_joint_state");      
+  node->declare_parameter("joint_name");      
+  node->declare_parameter("joint_states_topic");        
+  if(!node->get_parameter<bool>("publish_joint_state", publish_joint_state))
+  {
+    RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'publish_joint_state', using default instead.");
+    publish_joint_state = false;
+  }
+  if (publish_joint_state)
+  {
+    if(!node->get_parameter<std::string>("joint_name", joint_name))
+    {
+      RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'joint_name', using default instead.");
+      joint_name = "drive1";
+    }  if(!node->get_parameter<std::string>("joint_states_topic", joint_states_topic))
+    {
+      RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'joint_states_topic', using default instead.");
+      joint_states_topic = "joint_states";
+    }
+  }
 
   boost::asio::io_service io_service;
   shared_ptr<TCPSocket> socket = shared_ptr<TCPSocket>(new TCPSocket(io_service));
@@ -139,24 +150,40 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  float default_accel = 100.0;
-//  node->declare_parameter("default_accel");      
-//  default_accel = node->get_parameter("default_accel").as_double(), 100.0;
+  float default_accel;
+  node->declare_parameter("default_accel");      
+  if(!node->get_parameter<float>("default_accel", default_accel))
+  {
+    RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'default_accel', using default instead.");
+    default_accel = 100.0;
+  }
   servo->so.accel = default_accel;
 
-  float default_decel = 100.0;
-//  node->declare_parameter("default_decel");      
-//  default_decel = node->get_parameter("default_decel").as_double(), 100.0;
+  float default_decel;
+  node->declare_parameter("default_decel");      
+  if(!node->get_parameter<float>("default_decel", default_decel))
+  {
+    RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'default_decel', using default instead.");
+    default_decel = 100.0;
+  }
   servo->so.decel = default_decel;
 
-  float default_force = 30.0;
-//  node->declare_parameter("default_force");      
-//  default_force = node->get_parameter("default_force").as_double(), 30.0;
+  float default_force;
+  node->declare_parameter("default_force");      
+  if(!node->get_parameter<float>("default_force", default_force))
+  {
+    RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'default_force', using default instead.");
+    default_force = 30.0;
+  }
   servo->so.force = default_force;
 
-  float default_velocity = 10.0;
-//  node->declare_parameter("default_velocity");      
-//  default_velocity = node->get_parameter("default_velocity").as_double(), 10.0;
+  float default_velocity;
+  node->declare_parameter("default_velocity");      
+  if(!node->get_parameter<float>("default_velocity", default_velocity))
+  {
+    RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'default_velocity', using default instead.");
+    default_velocity = 10.0;
+  }
   servo->so.velocity = default_velocity;
 
   // publisher for stepper status
@@ -169,17 +196,6 @@ int main(int argc, char* argv[])
 
 
   // services
-//  ros::ServiceServer enable_service = nh.advertiseService("enable", &ACSI::enable, &servo);
-//  ros::ServiceServer estop_service = nh.advertiseService("estop", &ACSI::estop, &servo);
-//  ros::ServiceServer moveSelect_service = nh.advertiseService("moveSelect", &ACSI::moveSelect, &servo);
-//  ros::ServiceServer moveHome_service = nh.advertiseService("moveHome", &ACSI::moveHome, &servo);
-//  ros::ServiceServer moveStop_service = nh.advertiseService("moveStop", &ACSI::moveStop, &servo);
-//  ros::ServiceServer moveVelocity_service = nh.advertiseService("moveVelocity", &ACSI::moveVelocity, &servo);
-//  ros::ServiceServer moveAbsolute_service = nh.advertiseService("moveAbsolute", &ACSI::moveAbsolute, &servo);
-//  ros::ServiceServer moveIncremental_service = nh.advertiseService("moveIncremental", &ACSI::moveIncremental, &servo);
-//  ros::ServiceServer moveRotary_service = nh.advertiseService("moveRotary", &ACSI::moveRotary, &servo);
-//  ros::ServiceServer setHome_service = nh.advertiseService("setHome", &ACSI::setHome, &servo);
-//  ros::ServiceServer setProfile_service = nh.advertiseService("setProfile", &ACSI::setProfile, &servo);
   auto enable_service = node->create_service<std_srvs::srv::SetBool>("enable", std::bind(&ACSI::enable, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   auto estop_service = node->create_service<std_srvs::srv::SetBool>("estop", std::bind(&ACSI::estop, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   auto moveSelect_service = node->create_service<tolomatic_msgs::srv::AcsiMoveSelect>("moveSelect", std::bind(&ACSI::moveSelect, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
