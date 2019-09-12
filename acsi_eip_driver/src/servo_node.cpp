@@ -224,7 +224,7 @@ int main(int argc, char* argv[])
 
       if (publish_joint_state)
       {
-        //joint_state.header.stamp = rclcpp::Time::now();
+        joint_state.header.stamp = rclcpp::Clock().now();
         joint_state.name.resize(1);
         joint_state.position.resize(1);
         joint_state.name[0] = joint_name;
