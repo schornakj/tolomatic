@@ -97,7 +97,9 @@ int main(int argc, char* argv[])
     {
       RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'joint_name', using default instead.");
       joint_name = "drive1";
-    }  if(!node->get_parameter<std::string>("joint_states_topic", joint_states_topic))
+    }
+
+    if(!node->get_parameter<std::string>("joint_states_topic", joint_states_topic))
     {
       RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'joint_states_topic', using default instead.");
       joint_states_topic = "joint_states";
@@ -192,8 +194,12 @@ int main(int argc, char* argv[])
   
   // publisher and message for joint state
   sensor_msgs::msg::JointState joint_state;
-  auto joint_state_pub = node->create_publisher<sensor_msgs::msg::JointState>(joint_states_topic, 1);
+  joint_state.name.resize(1);
+  joint_state.position.resize(1);
+  joint_state.name[0] = joint_name;
+  joint_state.position[0] = 0.0;
 
+  auto joint_state_pub = node->create_publisher<sensor_msgs::msg::JointState>(joint_states_topic, 1);
 
   // services
   auto enable_service = node->create_service<std_srvs::srv::SetBool>("enable", std::bind(&ACSI::enable, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -208,7 +214,7 @@ int main(int argc, char* argv[])
   auto setHome_service = node->create_service<std_srvs::srv::Trigger>("setHome", std::bind(&ACSI::setHome, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   auto setProfile_service = node->create_service<tolomatic_msgs::srv::AcsiSetProfile>("setProfile", std::bind(&ACSI::setProfile, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-  // not implimented
+  // not implemented
   // ros::ServiceServer estop_service = nh.advertiseService("estop",
   // &STEPPER::estop, &stepper);
 
@@ -219,19 +225,13 @@ int main(int argc, char* argv[])
       // Collect status from controller, convert to ROS message format.
       InputAssembly test = servo->getDriveData();
       servo->updateDriveStatus(test);
-      //servo.updateDriveStatus(servo.getDriveData());
-      
 
-      if (publish_joint_state)
-      {
-        joint_state.header.stamp = rclcpp::Clock().now();
-        joint_state.name.resize(1);
-        joint_state.position.resize(1);
-        joint_state.name[0] = joint_name;
-        // TODO: See issue #2
-        joint_state.position[0] = double(servo->ss.current_position) / 1000.0;
-        joint_state_pub->publish(joint_state);
-      }
+      // Update joint state with new info from servo
+      joint_state.header.stamp = node->now();
+      // TODO: Convert from user-set units on servo driver to meters.
+      // Currently assume that the servo driver reports positions in millimeters.
+      // See issue #2.
+      joint_state.position[0] = double(servo->ss.current_position) / 1000.0;
 
       // publish stepper inputs
       servo_pub->publish(servo->si);
@@ -249,6 +249,12 @@ int main(int argc, char* argv[])
     catch (std::logic_error& ex)
     {
       RCLCPP_ERROR(node->get_logger(), "Problem parsing return data: ", ex.what());
+    }
+
+    // Always publish last-available joint state data even if we couldn't communicate with the servo.
+    if (publish_joint_state)
+    {
+      joint_state_pub->publish(joint_state);
     }
 
     rclcpp::spin_some(node);
