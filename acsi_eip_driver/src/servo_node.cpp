@@ -35,6 +35,18 @@
 
 #include "servo.h"
 
+static const std::string SERVICE_NAME_ENABLE = "enable";
+static const std::string SERVICE_NAME_ESTOP = "estop";
+static const std::string SERVICE_NAME_MOVE_SELECT = "moveSelect";
+static const std::string SERVICE_NAME_MOVE_HOME = "moveHome";
+static const std::string SERVICE_NAME_MOVE_STOP = "moveStop";
+static const std::string SERVICE_NAME_MOVE_VELOCITY = "moveVelocity";
+static const std::string SERVICE_NAME_MOVE_ABSOLUTE = "moveAbsolute";
+static const std::string SERVICE_NAME_MOVE_INCREMENTAL = "moveIncremental";
+static const std::string SERVICE_NAME_MOVE_ROTARY = "moveRotary";
+static const std::string SERVICE_NAME_SET_HOME = "setHome";
+static const std::string SERVICE_NAME_SET_PROFILE = "setProfile";
+
 using std::cout;
 using std::endl;
 using boost::shared_ptr;
@@ -42,6 +54,89 @@ using eip::socket::TCPSocket;
 using eip::socket::UDPSocket;
 
 using namespace acsi_eip_driver;
+
+using std::placeholders::_1;
+using std::placeholders::_2;
+using std::placeholders::_3;
+
+class ServoNode : public rclcpp::Node
+{
+public:
+  ServoNode()
+    : Node("servo_node")
+    , enable_service_(this->create_service<std_srvs::srv::SetBool>(SERVICE_NAME_ENABLE, std::bind(&ACSI::enable, this, _1, _2, _3)))
+    , estop_service_(this->create_service<std_srvs::srv::SetBool>(SERVICE_NAME_ESTOP, std::bind(&ACSI::estop, this, _1, _2, _3)))
+    , move_select_service_(this->create_service<tolomatic_msgs::srv::AcsiMoveSelect>(SERVICE_NAME_ENABLE, std::bind(&ACSI::moveSelect, this, _1, _2, _3)))
+    , move_home_service_(this->create_service<std_srvs::srv::Trigger>(SERVICE_NAME_MOVE_HOME, std::bind(&ACSI::moveHome, this, _1, _2, _3)))
+    , move_stop_service_(this->create_service<std_srvs::srv::Trigger>(SERVICE_NAME_MOVE_STOP, std::bind(&ACSI::moveStop, this, _1, _2, _3)))
+    , move_vel_service_(this->create_service<tolomatic_msgs::srv::AcsiMoveVelocity>(SERVICE_NAME_MOVE_VELOCITY, std::bind(&ACSI::moveVelocity, this, _1, _2, _3)))
+    , move_abs_service_(this->create_service<tolomatic_msgs::srv::AcsiMoveAbsolute>(SERVICE_NAME_MOVE_ABSOLUTE, std::bind(&ACSI::moveAbsolute, this, _1, _2, _3)))
+    , move_incr_service_(this->create_service<tolomatic_msgs::srv::AcsiMoveIncremental>(SERVICE_NAME_MOVE_INCREMENTAL, std::bind(&ACSI::moveIncremental, this, _1, _2, _3)))
+    , move_rot_service_(this->create_service<tolomatic_msgs::srv::AcsiMoveRotary>(SERVICE_NAME_MOVE_ROTARY, std::bind(&ACSI::moveRotary, this, _1, _2, _3)))
+    , set_home_service_(this->create_service<std_srvs::srv::Trigger>(SERVICE_NAME_SET_HOME, std::bind(&ACSI::setHome, this, _1, _2, _3)))
+    , set_profile_service_(this->create_service<tolomatic_msgs::srv::AcsiSetProfile>(SERVICE_NAME_SET_PROFILE, std::bind(&ACSI::setProfile, this, _1, _2, _3)))
+  {
+    this->declare_parameter("throttle", 10.0);
+    this->declare_parameter("host");
+
+
+    //This will be needed for implicit messaging
+//    string local_ip;
+//    node->declare_parameter("local_ip");
+//    if(!node->get_parameter<std::string>("local_ip", local_ip))
+//    {
+//      RCLCPP_WARN(node->get_logger(), "Failed to lookup parameter 'local_ip', using default instead.");
+//      local_ip = "0.0.0.0";
+//    }
+
+    // optionally publish ROS joint_state messages
+    this->declare_parameter("publish_joint_state", false);
+    this->declare_parameter("joint_name", "drive1");
+    this->declare_parameter("joint_states_topic", "joint_states");
+  }
+
+
+
+private:
+
+  bool init()
+  {
+    std::string host;
+    if(!this->get_parameter<std::string>("host", host))
+    {
+      RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to lookup required parameter 'host'.");
+      return false;
+    }
+    RCLCPP_INFO(this->get_logger(), "Host is: %s", host.c_str());
+  }
+
+//  auto enable_service = node->create_service<std_srvs::srv::SetBool>("enable", std::bind(&ACSI::enable, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+//  auto estop_service = node->create_service<std_srvs::srv::SetBool>("estop", std::bind(&ACSI::estop, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+//  auto moveSelect_service = node->create_service<tolomatic_msgs::srv::AcsiMoveSelect>("moveSelect", std::bind(&ACSI::moveSelect, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+//  auto moveHome_service = node->create_service<std_srvs::srv::Trigger>("moveHome", std::bind(&ACSI::moveHome, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+//  auto moveStop_service = node->create_service<std_srvs::srv::Trigger>("moveStop", std::bind(&ACSI::moveStop, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+//  auto moveVelocity_service = node->create_service<tolomatic_msgs::srv::AcsiMoveVelocity>("moveVelocity", std::bind(&ACSI::moveVelocity, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+//  auto moveAbsolute_service = node->create_service<tolomatic_msgs::srv::AcsiMoveAbsolute>("moveAbsolute", std::bind(&ACSI::moveAbsolute, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+//  auto moveIncremental_service = node->create_service<tolomatic_msgs::srv::AcsiMoveIncremental>("moveIncremental", std::bind(&ACSI::moveIncremental, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+//  auto moveRotary_service = node->create_service<tolomatic_msgs::srv::AcsiMoveRotary>("moveRotary", std::bind(&ACSI::moveRotary, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+//  auto setHome_service = node->create_service<std_srvs::srv::Trigger>("setHome", std::bind(&ACSI::setHome, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+//  auto setProfile_service = node->create_service<tolomatic_msgs::srv::AcsiSetProfile>("setProfile", std::bind(&ACSI::setProfile, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr enable_service_;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr estop_service_;
+  rclcpp::Service<tolomatic_msgs::srv::AcsiMoveSelect>::SharedPtr move_select_service_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr move_home_service_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr move_stop_service_;
+  rclcpp::Service<tolomatic_msgs::srv::AcsiMoveVelocity>::SharedPtr move_vel_service_;
+  rclcpp::Service<tolomatic_msgs::srv::AcsiMoveAbsolute>::SharedPtr move_abs_service_;
+  rclcpp::Service<tolomatic_msgs::srv::AcsiMoveIncremental>::SharedPtr move_incr_service_;
+  rclcpp::Service<tolomatic_msgs::srv::AcsiMoveRotary>::SharedPtr move_rot_service_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr set_home_service_;
+  rclcpp::Service<tolomatic_msgs::srv::AcsiSetProfile>::SharedPtr set_profile_service_;
+
+
+
+};
 
 int main(int argc, char* argv[])
 {
