@@ -87,19 +87,20 @@ class ServoNode : public rclcpp::Node
 public:
   ServoNode()
     : Node("servo_node")
-    , enable_service_(this->create_service<std_srvs::srv::SetBool>(SERVICE_NAME_ENABLE, std::bind(&ServoNode::enable_cb, this, _1, _2, _3)))
+    , cb_group_reentrant_(this->create_callback_group(rclcpp::callback_group::CallbackGroupType::Reentrant))
+    , enable_service_(this->create_service<std_srvs::srv::SetBool>(SERVICE_NAME_ENABLE, std::bind(&ServoNode::enable_cb, this, _1, _2, _3), rmw_qos_profile_services_default, cb_group_reentrant_))
 //    , estop_service_(this->create_service<std_srvs::srv::SetBool>(SERVICE_NAME_ESTOP, std::bind(&ACSI::estop, this, _1, _2, _3)))
 //    , move_select_service_(this->create_service<tolomatic_msgs::srv::AcsiMoveSelect>(SERVICE_NAME_ENABLE, std::bind(&ACSI::moveSelect, this, _1, _2, _3)))
-    , move_home_service_(this->create_service<std_srvs::srv::Trigger>(SERVICE_NAME_MOVE_HOME, std::bind(&ServoNode::move_home_cb, this, _1, _2, _3)))
+    , move_home_service_(this->create_service<std_srvs::srv::Trigger>(SERVICE_NAME_MOVE_HOME, std::bind(&ServoNode::move_home_cb, this, _1, _2, _3), rmw_qos_profile_services_default, cb_group_reentrant_))
 //    , move_stop_service_(this->create_service<std_srvs::srv::Trigger>(SERVICE_NAME_MOVE_STOP, std::bind(&ACSI::moveStop, this, _1, _2, _3)))
 //    , move_vel_service_(this->create_service<tolomatic_msgs::srv::AcsiMoveVelocity>(SERVICE_NAME_MOVE_VELOCITY, std::bind(&ACSI::moveVelocity, this, _1, _2, _3)))
-    , move_abs_service_(this->create_service<tolomatic_msgs::srv::AcsiMoveAbsolute>(SERVICE_NAME_MOVE_ABSOLUTE, std::bind(&ServoNode::move_absolute_cb, this, _1, _2, _3)))
+    , move_abs_service_(this->create_service<tolomatic_msgs::srv::AcsiMoveAbsolute>(SERVICE_NAME_MOVE_ABSOLUTE, std::bind(&ServoNode::move_absolute_cb, this, _1, _2, _3), rmw_qos_profile_services_default, cb_group_reentrant_))
 //    , move_incr_service_(this->create_service<tolomatic_msgs::srv::AcsiMoveIncremental>(SERVICE_NAME_MOVE_INCREMENTAL, std::bind(&ACSI::moveIncremental, this, _1, _2, _3)))
 //    , move_rot_service_(this->create_service<tolomatic_msgs::srv::AcsiMoveRotary>(SERVICE_NAME_MOVE_ROTARY, std::bind(&ACSI::moveRotary, this, _1, _2, _3)))
 //    , set_home_service_(this->create_service<std_srvs::srv::Trigger>(SERVICE_NAME_SET_HOME, std::bind(&ACSI::setHome, this, _1, _2, _3)))
 //    , set_profile_service_(this->create_service<tolomatic_msgs::srv::AcsiSetProfile>(SERVICE_NAME_SET_PROFILE, std::bind(&ACSI::setProfile, this, _1, _2, _3)))
-    , servo_status_pub_(this->create_publisher<tolomatic_msgs::msg::AcsiStatus>(TOPIC_NAME_STATUS, rclcpp::QoS(1)))
-    , joint_state_pub_(this->create_publisher<sensor_msgs::msg::JointState>(TOPIC_NAME_JOINT_STATES, rclcpp::QoS(1)))
+//    , servo_status_pub_(this->create_publisher<tolomatic_msgs::msg::AcsiStatus>(TOPIC_NAME_STATUS, rclcpp::QoS(1)))
+//    , joint_state_pub_(this->create_publisher<sensor_msgs::msg::JointState>(TOPIC_NAME_JOINT_STATES, rclcpp::QoS(1)))
 
   {
     this->declare_parameter(PARAM_NAME_THROTTLE, 0.1);
@@ -115,6 +116,11 @@ public:
     this->declare_parameter(PARAM_NAME_PUBLISH_JOINT_STATE, false);
     this->declare_parameter(PARAM_NAME_JOINT_NAME, "drive1");
 
+    rclcpp::PublisherOptions options;
+    options.callback_group = cb_group_reentrant_;
+
+    servo_status_pub_ = this->create_publisher<tolomatic_msgs::msg::AcsiStatus>(TOPIC_NAME_STATUS, rclcpp::QoS(1), options);
+    joint_state_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(TOPIC_NAME_JOINT_STATES, rclcpp::QoS(1), options);
   }
 
   bool init()
@@ -143,6 +149,8 @@ public:
     shared_ptr<TCPSocket> socket = shared_ptr<TCPSocket>(new TCPSocket(io_service));
     shared_ptr<UDPSocket> io_socket = shared_ptr<UDPSocket>(new UDPSocket(io_service, 0, local_ip));
 
+    std::scoped_lock servo_lock(servo_guard_);
+
     servo_ = std::make_shared<ACSI>(socket, io_socket);
 
     RCLCPP_INFO_STREAM(this->get_logger(), "Socket created");
@@ -160,18 +168,19 @@ public:
       return false;
     }
 
-    servo_->so.accel = this->get_parameter(PARAM_NAME_DEFAULT_ACCEL).as_double();
-    servo_->so.decel = this->get_parameter(PARAM_NAME_DEFAULT_DECEL).as_double();
-    servo_->so.force = this->get_parameter(PARAM_NAME_DEFAULT_FORCE).as_double();
-    servo_->so.velocity = this->get_parameter(PARAM_NAME_DEFAULT_VELOCITY).as_double();
+    servo_->so.accel = static_cast<float>(this->get_parameter(PARAM_NAME_DEFAULT_ACCEL).as_double());
+    servo_->so.decel = static_cast<float>(this->get_parameter(PARAM_NAME_DEFAULT_DECEL).as_double());
+    servo_->so.force = static_cast<float>(this->get_parameter(PARAM_NAME_DEFAULT_FORCE).as_double());
+    servo_->so.velocity = static_cast<float>(this->get_parameter(PARAM_NAME_DEFAULT_VELOCITY).as_double());
 
-    update_timer_ = this->create_wall_timer(std::chrono::duration<std::double_t>(this->get_parameter(PARAM_NAME_THROTTLE).as_double()), std::bind(&ServoNode::on_update_timer, this));
-
+    update_timer_ = this->create_wall_timer(std::chrono::duration<std::double_t>(this->get_parameter(PARAM_NAME_THROTTLE).as_double()), std::bind(&ServoNode::on_update_timer, this), cb_group_reentrant_);
+    joint_state_pub_timer_ = this->create_wall_timer(std::chrono::duration<std::double_t>(this->get_parameter(PARAM_NAME_THROTTLE).as_double()), std::bind(&ServoNode::on_joint_state_timer, this), cb_group_reentrant_);
     return true;
   }
 
   void cleanup()
   {
+    std::scoped_lock servo_lock(servo_guard_);
     update_timer_->cancel();
     servo_->closeConnection(0);
     servo_->close();
@@ -183,17 +192,20 @@ private:
   {
     try
     {
+      std::scoped_lock servo_lock(servo_guard_);
       // Collect status from controller, convert to ROS message format.
       InputAssembly test = servo_->getDriveData();
       servo_->updateDriveStatus(test);
 
-      joint_state_.name[0] = this->get_parameter(PARAM_NAME_JOINT_NAME).as_string();
-      // Update joint state with new info from servo
-      joint_state_.header.stamp = this->now();
-      // TODO: Convert from user-set units on servo driver to meters.
-      // Currently assume that the servo driver reports positions in millimeters.
-      // See issue #2.
-      joint_state_.position[0] = double(servo_->ss.current_position) / 1000.0;
+      {
+        std::scoped_lock js_lock(js_guard_);
+        // TODO: Convert from user-set units on servo driver to meters.
+        // Currently assume that the servo driver reports positions in millimeters.
+        // See issue #2.
+        joint_state_.name[0] = this->get_parameter(PARAM_NAME_JOINT_NAME).as_string();
+        joint_state_.header.stamp = this->now();
+        joint_state_.position[0] = double(servo_->ss.current_position) / 1000.0;
+      }
 
       // publish stepper inputs
 //      servo_pub->publish(servo->si);
@@ -212,10 +224,14 @@ private:
     {
       RCLCPP_ERROR_STREAM(this->get_logger(), "Problem parsing return data: " << e.what());
     }
+  }
 
-    // Always publish last-available joint state data even if we couldn't communicate with the servo.
+  void on_joint_state_timer()
+  {
     if (this->get_parameter(PARAM_NAME_PUBLISH_JOINT_STATE).as_bool())
     {
+      std::cout << "JS" << std::endl;
+      std::scoped_lock js_lock(js_guard_);
       joint_state_pub_->publish(joint_state_);
     }
   }
@@ -224,6 +240,8 @@ private:
                         const std::shared_ptr<tolomatic_msgs::srv::AcsiMoveAbsolute::Request> req,
                         std::shared_ptr<tolomatic_msgs::srv::AcsiMoveAbsolute::Response> res)
   {
+    (void) request_header;
+
     if (servo_ == nullptr)
     {
       res->message = "Connection to servo was not initialized";
@@ -251,6 +269,8 @@ private:
                  const std::shared_ptr<std_srvs::srv::SetBool::Request> req,
                  const std::shared_ptr<std_srvs::srv::SetBool::Response> res)
   {
+    (void) request_header;
+
     if (servo_ == nullptr)
     {
       res->message = "Connection to servo was not initialized";
@@ -278,6 +298,9 @@ private:
                     const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
                     const std::shared_ptr<std_srvs::srv::Trigger::Response> res)
   {
+    (void) request_header;
+    (void) req;
+
     if (servo_ == nullptr)
     {
       res->message = "Connection to servo was not initialized";
@@ -313,12 +336,18 @@ private:
 //  auto setHome_service = node->create_service<std_srvs::srv::Trigger>("setHome", std::bind(&ACSI::setHome, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 //  auto setProfile_service = node->create_service<tolomatic_msgs::srv::AcsiSetProfile>("setProfile", std::bind(&ACSI::setProfile, servo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
+
   std::shared_ptr<ACSI> servo_;
 
   sensor_msgs::msg::JointState joint_state_;
 
   rclcpp::TimerBase::SharedPtr update_timer_;
+  rclcpp::TimerBase::SharedPtr joint_state_pub_timer_;
 
+  std::mutex js_guard_;
+  std::mutex servo_guard_;
+
+  rclcpp::callback_group::CallbackGroup::SharedPtr cb_group_reentrant_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr enable_service_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr estop_service_;
   rclcpp::Service<tolomatic_msgs::srv::AcsiMoveSelect>::SharedPtr move_select_service_;
@@ -345,12 +374,15 @@ int main(int argc, char* argv[])
   rclcpp::init(argc, argv);
 
   auto node = std::make_shared<ServoNode>();
+  auto exec = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
   if(!node->init())
   {
     RCLCPP_ERROR_STREAM(node->get_logger(), "Failed to initialize servo node");
     return -1;
   }
-  rclcpp::spin(node);
+  exec->add_node(node);
+  exec->spin();
+  exec->remove_node(node);
   node->cleanup();
   return 0;
 

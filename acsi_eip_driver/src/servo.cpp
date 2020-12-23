@@ -348,7 +348,7 @@ void ACSI::moveStop()
 //  }
 //}
 
-void ACSI::moveAbsolute(const std::double_t &position)
+void ACSI::moveAbsolute(const float &position)
 {
   if (ss.host_control)
   {
@@ -362,7 +362,7 @@ void ACSI::moveAbsolute(const std::double_t &position)
 
   so.drive_command = START | so.drive_command;
   so.motion_type = ABSOLUTE;
-  so.position = static_cast<float>(position);
+  so.position = position;
 }
 
 //void ACSI::moveIncremental(const std::shared_ptr<rmw_request_id_t> request_header,

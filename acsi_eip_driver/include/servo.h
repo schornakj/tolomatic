@@ -129,7 +129,7 @@ public:
 
   void moveStop();
 
-  void moveAbsolute(const std::double_t& position);
+  void moveAbsolute(const float& position);
 
 
   // TODO: Debug this
